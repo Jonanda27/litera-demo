@@ -3,29 +3,69 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Experiment - LITERA</title>
+  <title>LITERA - Ultimate Writer Workspace</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    /* Animasi Modal */
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow-x: hidden; }
     .modal-backdrop { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
     .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
     @keyframes modalFadeIn {
-      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      from { opacity: 0; transform: scale(0.98) translateY(10px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    
+    .step-content { display: none; }
+    .step-content.active { display: block; }
+    
+    /* State for buttons */
+    .btn-active-purple { @apply bg-purple-600 text-white shadow-lg shadow-purple-200; }
+    .btn-inactive { @apply bg-white border border-slate-100 text-slate-400 hover:border-purple-200; }
+
+    /* RESPONSIVE SIDEBAR LOGIC */
+    #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    #mainContent { transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    /* Default: Layar Kecil (Mobile/Tablet) */
+    @media (max-width: 1023px) {
+      #sidebar { transform: translateX(-100%); }
+      #mainContent { margin-left: 0; }
+      #mobileOverlay { display: none; opacity: 0; transition: opacity 0.3s; }
+      
+      body.sidebar-open #sidebar { transform: translateX(0); }
+      body.sidebar-open #mobileOverlay { display: block; opacity: 1; }
+      body.sidebar-open { overflow: hidden; } /* Cegah scroll saat menu terbuka */
+    }
+
+    /* Default: Layar Besar (Desktop) */
+    @media (min-width: 1024px) {
+      #sidebar { transform: translateX(0); }
+      #mainContent { margin-left: 16rem; /* 256px / w-64 */ }
+      #mobileOverlay { display: none !important; }
+      
+      body.sidebar-closed #sidebar { transform: translateX(-100%); }
+      body.sidebar-closed #mainContent { margin-left: 0; }
     }
   </style>
 </head>
-<body class="relative overflow-x-hidden min-h-screen">
+<body class="relative min-h-screen">
 
-  <nav class="fixed top-0 left-0 right-0 z-50 h-20 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
+  <nav class="fixed top-0 left-0 right-0 z-[60] h-20 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 h-full flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 flex items-center justify-center shrink-0">
+      <div class="flex items-center gap-3 md:gap-4">
+        <button onclick="toggleSidebar()" class="flex lg:hidden w-10 h-10 flex-col justify-center items-center gap-[5px] text-slate-800 hover:bg-slate-100 rounded-lg transition-all cursor-pointer outline-none">
+          <div class="w-5 h-[2px] bg-slate-800 rounded-full"></div>
+          <div class="w-5 h-[2px] bg-slate-800 rounded-full"></div>
+          <div class="w-5 h-[2px] bg-slate-800 rounded-full"></div>
+        </button>
+
+        <div class="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0">
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Coat_of_arms_of_Jakarta.svg/500px-Coat_of_arms_of_Jakarta.svg.png" alt="Logo Jakarta" class="w-full h-full object-contain">
         </div>
-        <span class="text-xl font-black text-slate-800 tracking-tighter">LITERA</span>
+        <span class="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">LITERA</span>
       </div>
       <div class="flex items-center justify-end gap-4">
         <div class="text-right leading-tight hidden md:block">
@@ -37,56 +77,18 @@
     </div>
   </nav>
 
-  <div id="addProjectModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 modal-backdrop">
-    <div class="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl border-[6px] border-emerald-700 relative modal-enter overflow-hidden p-8 md:p-10">
-      
-      <h2 class="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter mb-6">Mulai Proyek Baru</h2>
-      
-      <div class="space-y-6">
-        <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Judul Proyek</label>
-          <input type="text" id="projectTitle" placeholder="Ketik judul proyek..." 
-            class="w-full p-4 rounded-2xl border-2 border-emerald-100 bg-slate-50 focus:border-emerald-600 focus:bg-white outline-none font-bold text-slate-700 transition-all">
-        </div>
-
-        <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori Buku</label>
-          <div class="flex gap-4">
-            <button onclick="selectCategory('fiksi')" id="cat-fiksi" 
-              class="flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm">
-              <span class="text-lg">📖</span> FIKSI
-            </button>
-            <button onclick="selectCategory('nonfiksi')" id="cat-nonfiksi" 
-              class="flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-slate-100 bg-white text-slate-400 hover:border-emerald-200">
-              <span class="text-lg">🧠</span> NON-FIKSI
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between pt-6">
-          <button onclick="closeModal()" class="text-slate-400 font-black uppercase text-xs tracking-widest hover:text-rose-500 transition-colors">
-            Batal
-          </button>
-          <button onclick="createProject()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-900/20 transition-all active:scale-95">
-            Buat Proyek →
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="toggleSidebar()"></div>
-
-  <aside id="sidebar" class="fixed left-0 top-20 h-[calc(100vh-80px)] bg-emerald-700 transition-all duration-300 z-40 w-64 lg:translate-x-0 -translate-x-full">
-    <div class="py-8 px-4 flex flex-col gap-2 overflow-y-auto h-full text-white">
+  <aside id="sidebar" class="fixed left-0 top-20 h-[calc(100vh-80px)] bg-emerald-700 z-40 w-64 shadow-xl lg:shadow-none">
+    <div class="py-8 px-4 flex flex-col gap-2 overflow-y-auto h-full text-white custom-scrollbar">
       <a href="dashboard.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Dashboard</a>
       <a href="exercise.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Exercise</a>
       <a href="experience.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Experience</a>
-      <a href="experiment.html" class="px-4 py-3 rounded-lg font-bold text-sm bg-white text-emerald-700 transition-all">Experiment</a>
-       <a href="livesession.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-white/10 transition-all">Live Session </a>
-      <a href="sertifikasi.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-white/10 transition-all">Sertifikasi</a>
-      <a href="experiment.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-white/10 transition-all">Tools Pendukung</a>
-    <div class="mt-auto pt-4 border-t border-white/20">
+      <a href="#" class="px-4 py-3 rounded-lg font-bold text-sm bg-white text-emerald-700 transition-all shadow-md">Experiment</a>
+      <a href="livesession.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Live Session</a>
+       <a href="sertifikasi.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Sertifikasi</a>
+        <a href="tools.html" class="px-4 py-3 rounded-lg font-bold text-sm hover:bg-white/10 transition-all">Tools Pendukung</a>
+        <a href="e-book.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-white/10 transition-all">E-Book</a>
+         <a href="hubmentor.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-white/10 transition-all">Hubungi Mentor</a>
+       <div class="mt-auto pt-4 border-t border-white/20">
         <a href="../landingpage.html" class="px-4 py-3 rounded-lg font-bold text-sm text-white hover:bg-rose-600 transition-all flex items-center gap-3 group">
           <svg class="w-5 h-5 text-emerald-200 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -95,56 +97,407 @@
         </a>
       </div>
     </div>
-</aside>
+  </aside>
 
-  <button onclick="toggleSidebar()" id="sidebarToggle" class="fixed top-24 bg-white border border-slate-200 rounded-r-lg p-2 z-50 shadow-md transition-all duration-300 left-0 lg:left-64 lg:hidden">
-    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path id="toggleIcon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-    </svg>
-  </button>
+  <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-30" onclick="closeSidebar()"></div>
 
-  <div id="mainContent" class="pt-20 transition-all duration-300 min-h-screen lg:ml-64 ml-0 text-black">
-    <div class="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-6 md:space-y-8 pb-24 md:pb-10">
+  <div id="addProjectModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl border-[6px] border-emerald-700 relative modal-enter overflow-hidden p-8 md:p-10">
+      <h2 class="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter mb-6">Mulai Proyek Baru</h2>
+      <div class="space-y-6">
+        <div class="space-y-2">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Judul Proyek</label>
+          <input type="text" placeholder="Ketik judul proyek..." class="w-full p-4 rounded-2xl border-2 border-emerald-100 bg-slate-50 outline-none font-bold text-slate-700 focus:border-emerald-600 transition-all">
+        </div>
+        <div class="space-y-2">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori Buku</label>
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button class="flex-1 py-4 rounded-2xl border-2 border-emerald-600 bg-emerald-50 text-emerald-700 font-black text-xs uppercase tracking-wider">📖 FIKSI</button>
+            <button class="flex-1 py-4 rounded-2xl border-2 border-slate-100 bg-white text-slate-400 font-black text-xs uppercase tracking-wider">🧠 NON-FIKSI</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-6">
+          <button onclick="closeModal('addProjectModal')" class="text-slate-400 font-black uppercase text-xs tracking-widest hover:text-rose-500">Batal</button>
+          <button class="bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-emerald-800 transition-all">Buat Proyek →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editorModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 modal-backdrop">
+    <div class="bg-[#f3f4f6] rounded-[2.5rem] w-full max-w-6xl h-[92vh] shadow-2xl relative modal-enter overflow-hidden flex flex-col border border-slate-200">
       
-      <header class="space-y-2 pt-4 md:pt-0">
-        <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter uppercase">EXPERIMENT</h1>
-        <p class="text-emerald-700 font-bold text-base md:text-lg  leading-tight">
-          Klik kartu buku untuk melihat progres penulisan mingguan.
-        </p>
-      </header>
+      <div class="p-6 bg-white border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+        <div>
+          <span id="editorLabel" class="bg-purple-100 text-purple-600 px-3 py-1 rounded-md text-[10px] font-black uppercase">Fiksi</span>
+          <h2 class="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tighter mt-1">Ayam Hitam</h2>
+          <div class="flex items-center gap-4 mt-3">
+             <div id="progressBar" class="flex gap-1 flex-wrap hidden md:flex"></div>
+             <span id="stepCounter" class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Langkah 1 dari 11</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 align-self-end sm:align-self-auto">
+           <span id="currentStepName" class="text-[9px] font-black text-purple-600 uppercase tracking-widest italic">Ide Cepat</span>
+           <button onclick="closeModal('editorModal')" class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all font-black">✕</button>
+        </div>
+      </div>
 
-      <section class="space-y-6 pt-2 md:pt-4 min-h-[300px]">
-        
-        <div class="flex flex-col mb-4 px-2 sm:px-0">
-          <div onclick="toggleStats('stats-1')" class="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm border-2 border-slate-100 hover:border-emerald-500 transition-all cursor-pointer z-10 group">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div class="flex gap-3 md:gap-4 w-full">
-                <div class="relative w-12 h-12 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-emerald-50 rounded-xl md:rounded-2xl group-hover:bg-emerald-100 transition-colors">
-                  <span class="text-3xl md:text-5xl">📖</span>
+      <div id="editorScrollArea" class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <div id="step-1" class="step-content active">
+          <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-8">
+            <div class="flex items-center gap-2 text-amber-500"><span class="text-xl">✨</span> <h3 class="font-black text-xs uppercase tracking-[0.2em]">Rekam Ide Baru</h3></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Judul Ide</label>
+                    <input type="text" placeholder="Misal: Twist si pembunuh ternyata..." class="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 outline-none font-bold text-sm">
                 </div>
-                <div class="space-y-1 flex-1 min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h3 class="text-base md:text-lg font-black text-slate-800 leading-tight truncate">Proyek: Buku Biografi Mamak</h3>
-                    <span class="text-[8px] md:text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 text-amber-700">Lihat Stats</span>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Waktu Muncul</label>
+                    <div class="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-sm font-bold text-slate-700">04/27/2026 🕒</div>
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Deskripsi Detail Ide</label>
+                <textarea rows="4" placeholder="Tuliskan semua yang terlintas..." class="w-full p-6 rounded-2xl border border-slate-100 bg-slate-50 outline-none font-medium text-sm"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-2" class="step-content">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button class="px-6 py-2 rounded-full bg-indigo-600 text-white font-black text-[10px] uppercase">FILE</button>
+                    <button class="px-6 py-2 rounded-full bg-slate-100 text-slate-400 font-black text-[10px] uppercase">URL</button>
+                    <button class="px-6 py-2 rounded-full bg-slate-100 text-slate-400 font-black text-[10px] uppercase">WARNA</button>
+                </div>
+                <div class="aspect-square rounded-3xl border-4 border-dashed border-slate-100 flex flex-col items-center justify-center gap-4 text-slate-300">
+                    <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-3xl">📂</div>
+                    <p class="font-black text-[10px] uppercase tracking-widest text-center">Klik atau Taruh Gambar</p>
+                </div>
+            </div>
+            <div class="space-y-6">
+                <div class="bg-slate-100/50 p-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 italic">Contoh: Arsitektur Kota Melayang</div>
+                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Deskripsi Detail</label>
+                    <textarea placeholder="Apa yang menarik dari visual ini? Jelaskan tekstur, cahaya..." class="w-full h-32 bg-transparent outline-none text-sm font-medium"></textarea>
+                </div>
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Koneksi Dalam Cerita</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3"><span class="text-xl">👤</span> <div class="flex flex-col"><span class="text-[8px] font-black uppercase text-slate-400">Karakter Terkait</span><span class="text-[10px] font-bold">...</span></div></div>
+                  <div class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3"><span class="text-xl">📍</span> <div class="flex flex-col"><span class="text-[8px] font-black uppercase text-slate-400">Lokasi / Setting</span><span class="text-[10px] font-bold">...</span></div></div>
+                  <div class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3"><span class="text-xl">📄</span> <div class="flex flex-col"><span class="text-[8px] font-black uppercase text-slate-400">Bab / Adegan</span><span class="text-[10px] font-bold">...</span></div></div>
+                  <div class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3"><span class="text-xl">✨</span> <div class="flex flex-col"><span class="text-[8px] font-black uppercase text-slate-400">Mood / Suasana</span><span class="text-[10px] font-bold">...</span></div></div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-3" class="step-content">
+          <div class="bg-blue-600 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-center mb-8 text-white gap-4">
+              <div class="flex items-center gap-4"><div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🖼️</div><h3 class="font-black uppercase tracking-widest">Desain Sampul</h3></div>
+              <button class="bg-white text-blue-600 px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg w-full md:w-auto">💾 Simpan Sampul</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-10">
+              <div class="space-y-3">
+                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Sampul Depan</label>
+                  <div class="aspect-[3/4] max-w-sm mx-auto rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white/50 flex items-center justify-center text-4xl text-slate-200">↑</div>
+              </div>
+              <div class="space-y-3">
+                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Sampul Belakang</label>
+                  <div class="aspect-[3/4] max-w-sm mx-auto rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white/50 flex items-center justify-center text-4xl text-slate-200">↑</div>
+              </div>
+          </div>
+        </div>
+
+        <div id="step-4" class="step-content">
+          <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2"><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Judul Materi Riset</label><input type="text" value="Misal: Sejarah Arsitektur Gotik" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Kredibilitas Sumber</label><div class="text-amber-400 text-2xl pt-2">★★★★★</div></div>
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Jenis Sumber</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-6 py-3 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase">📄 Artikel</button>
+                <button class="px-6 py-3 rounded-full bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">📚 Buku</button>
+                <button class="px-6 py-3 rounded-full bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">🎬 Video</button>
+                <button class="px-6 py-3 rounded-full bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">🎙️ Podcast</button>
+                <button class="px-6 py-3 rounded-full bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">📝 Catatan</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Link / Referensi URL</label>
+              <input type="text" value="https://example.com" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-medium">
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Kutipan Penting</label>
+              <textarea rows="4" placeholder="Tuliskan poin penting..." class="w-full p-6 rounded-2xl bg-slate-50 border text-sm font-medium"></textarea>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Tags</label><input type="text" value="SEJARAH, MEDIS" class="w-full p-4 rounded-xl border text-xs font-black uppercase"></div>
+              <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Letak (Hal / Menit)</label><div class="flex gap-2"><input type="text" placeholder="Hal." class="w-full p-4 rounded-xl border text-xs font-bold"><input type="text" placeholder="Menit" class="w-full p-4 rounded-xl border text-xs font-bold"></div></div>
+              <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Rencana Penggunaan</label><input type="text" value="Misal: Bab 3" class="w-full p-4 rounded-xl border text-xs font-bold"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-5" class="step-content">
+          <div class="bg-white rounded-[2.5rem] border-2 border-emerald-100 p-6 md:p-8 space-y-8">
+            <div class="flex items-center gap-2 text-emerald-600 font-black uppercase text-xs">✨ Tambah Bab Baru</div>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">No. Bab</label><input type="text" value="01" class="w-full p-4 rounded-2xl bg-slate-50 border text-center font-black"></div>
+                <div class="sm:col-span-3"><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Judul Bab</label><input type="text" placeholder="Judul..." class="w-full p-4 rounded-2xl bg-slate-50 border font-bold"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">POV</label><select class="w-full p-4 rounded-2xl bg-slate-50 border font-bold text-sm"><option>Orang ketiga (Dia)</option><option>Orang pertama (Aku)</option></select></div>
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Lokasi Utama</label><input type="text" placeholder="Lokasi..." class="w-full p-4 rounded-2xl bg-slate-50 border font-bold text-sm"></div>
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Waktu</label><input type="text" placeholder="Waktu..." class="w-full p-4 rounded-2xl bg-slate-50 border font-bold text-sm"></div>
+            </div>
+            <div class="border-t pt-6">
+              <label class="text-[10px] font-black text-slate-400 uppercase block mb-4 text-center">Sub-Bab / Adegan</label>
+              <div class="p-6 rounded-2xl border-2 border-dashed border-slate-100">
+                <input type="text" placeholder="#1 Judul Adegan..." class="w-full mb-4 bg-transparent font-black text-emerald-600 outline-none">
+                <textarea rows="3" placeholder="Poin alur..." class="w-full bg-transparent text-sm italic outline-none"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-6" class="step-content">
+          <div class="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-100 shadow-sm space-y-8">
+            <h3 class="flex items-center gap-2 text-purple-600 font-black uppercase text-xs">✨ Karakter Baru</h3>
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="w-44 h-44 aspect-square mx-auto md:mx-0 rounded-[2rem] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300 shrink-0">
+                    <div class="text-3xl mb-2">📷</div>
+                    <span class="text-[8px] font-black uppercase text-center">Klik Untuk Upload</span>
+                </div>
+                <div class="flex-1 space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Nama Lengkap</label><input type="text" value="Misal: Alya Maheswari" class="w-full p-4 rounded-xl bg-slate-50 border font-bold text-sm"></div>
+                        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Nama Panggilan</label><input type="text" value="Misal: Alya" class="w-full p-4 rounded-xl bg-slate-50 border font-bold text-sm"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Peran Dalam Cerita</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="px-6 py-2 rounded-lg bg-purple-600 text-white font-black text-[10px] uppercase">Protagonist</button>
+                            <button class="px-6 py-2 rounded-lg bg-slate-50 text-slate-400 font-black text-[10px] uppercase">Antagonist</button>
+                            <button class="px-6 py-2 rounded-lg bg-slate-50 text-slate-400 font-black text-[10px] uppercase">Deuteragonist</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-6 md:p-8 rounded-[2.5rem] border border-slate-100">
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-black uppercase text-purple-600 flex items-center gap-2">📋 Data Diri</h4>
+                    <div class="flex gap-2">
+                      <div class="w-1/2"><label class="text-[8px] font-black uppercase text-slate-400">Usia</label><input type="text" value="25" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                      <div class="w-1/2"><label class="text-[8px] font-black uppercase text-slate-400">Lahir</label><input type="text" value="DD/MM" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                    </div>
+                    <div><label class="text-[8px] font-black uppercase text-slate-400">Pekerjaan</label><input type="text" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-black uppercase text-rose-600 flex items-center gap-2">💪 Fisik</h4>
+                    <div class="flex gap-2">
+                      <div class="w-1/2"><label class="text-[8px] font-black uppercase text-slate-400">Tinggi (cm)</label><input type="text" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                      <div class="w-1/2"><label class="text-[8px] font-black uppercase text-slate-400">Mata</label><input type="text" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                    </div>
+                    <div><label class="text-[8px] font-black uppercase text-slate-400">Rambut</label><input type="text" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-black uppercase text-blue-600 flex items-center gap-2">🧠 Sifat</h4>
+                    <div><label class="text-[8px] font-black uppercase text-slate-400">Sifat Baik</label><input type="text" value="Ramah, Jujur..." class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                    <div><label class="text-[8px] font-black uppercase text-slate-400">Sifat Buruk</label><input type="text" value="Keras Kepala..." class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-7" class="step-content">
+          <div class="bg-white rounded-[2.5rem] p-6 md:p-8 space-y-8">
+            <h3 class="flex items-center gap-2 text-emerald-600 font-black uppercase text-xs">✨ Lokasi Baru</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Referensi Visual</label>
+                  <div class="aspect-video rounded-[2rem] border-4 border-dashed border-emerald-100 bg-emerald-50/30 flex flex-col items-center justify-center text-emerald-200">
+                      <span class="text-3xl mb-2">🖼️</span>
+                      <span class="text-[9px] font-black uppercase">Upload Gambar / Denah</span>
                   </div>
-                  <p class="text-[11px] md:text-sm font-bold text-slate-500">Update terakhir: 12 Januari 2026</p>
-                  <p class="text-[11px] md:text-sm font-bold text-emerald-600  leading-none">
-                    <span class="not- font-black text-slate-400 uppercase text-[8px]">Kendala:</span> Belum paham mengatur alur cerita
-                  </p>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Nama Lokasi</label>
+                        <input type="text" value="Misal: Hutan Awan Merah" class="w-full p-4 rounded-xl bg-slate-50 border font-black outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Jenis Lokasi</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-[10px] uppercase">Kota/Negara</button>
+                            <button class="px-4 py-2 rounded-lg bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">Bangunan/Rumah</button>
+                            <button class="px-4 py-2 rounded-lg bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase">Alam</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                <div class="md:col-span-2">
+                  <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Gambaran Fisik</label>
+                  <textarea rows="4" placeholder="Ceritakan detail bangunan, vegetasi, atau arsitektur..." class="w-full p-6 rounded-2xl bg-slate-50 border text-sm font-medium"></textarea>
+                </div>
+                <div class="space-y-4">
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Suasana</label><input type="text" value="Angker, dll" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Cuaca Umum</label><input type="text" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-8" class="step-content">
+          <div class="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-100 space-y-8 shadow-sm">
+            <h3 class="flex items-center gap-2 text-cyan-600 font-black uppercase text-xs">✨ Peristiwa Baru</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Kejadian Ke-</label><input type="text" value="1" class="w-full p-4 rounded-xl bg-slate-50 border text-center font-black"></div>
+                <div class="sm:col-span-3"><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Nama Peristiwa</label><input type="text" value="Misal: Penemuan Peta Kuno di Loteng" class="w-full p-4 rounded-xl bg-slate-50 border font-bold"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-cyan-50/50 rounded-2xl border border-cyan-100">
+                <div><label class="text-[8px] font-black uppercase text-cyan-600 mb-2 block">Tanggal / Hari Ke-</label><input type="text" value="Hari ke-1" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                <div><label class="text-[8px] font-black uppercase text-cyan-600 mb-2 block">Jam (Opsional)</label><input type="text" value="10:00" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+                <div><label class="text-[8px] font-black uppercase text-cyan-600 mb-2 block">Durasi Kejadian</label><input type="text" value="2 Jam" class="w-full p-3 rounded-lg bg-white border text-sm font-bold"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Deskripsi Singkat</label><textarea rows="4" placeholder="Apa yang terjadi secara ringkas?" class="w-full p-6 rounded-2xl bg-slate-50 border text-sm font-medium"></textarea></div>
+                <div class="space-y-4">
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Karakter Terlibat</label><input type="text" value="Alya, Budi" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Lokasi Kejadian</label><input type="text" value="Misal: Perpustakaan Kota" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-9" class="step-content">
+          <div class="bg-white rounded-[2.5rem] p-6 md:p-8 border border-slate-100 space-y-8 shadow-sm">
+            <h3 class="flex items-center gap-2 text-orange-600 font-black uppercase text-xs">✨ Adegan Baru</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Judul Adegan</label>
+                        <input type="text" placeholder="Judul..." class="w-full p-4 rounded-xl bg-slate-50 border font-black text-lg outline-none focus:border-orange-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Bab Ke-</label><input type="text" class="w-full p-4 rounded-xl bg-slate-50 border font-bold"></div>
+                        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Urutan</label><input type="text" class="w-full p-4 rounded-xl bg-slate-50 border font-bold"></div>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-2 text-center">Posisi Babak</label>
+                    <div class="space-y-2">
+                        <button class="w-full p-3 rounded-xl bg-orange-500 text-white font-black text-[10px] uppercase text-left pl-6 shadow-lg shadow-orange-100 transition-all">Babak 1: Pengenalan</button>
+                        <button class="w-full p-3 rounded-xl bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase text-left pl-6 hover:border-orange-200 transition-all">Babak 2: Konflik Meningkat</button>
+                        <button class="w-full p-3 rounded-xl bg-white border border-slate-100 text-slate-400 font-black text-[10px] uppercase text-left pl-6 hover:border-orange-200 transition-all">Babak 3: Klimaks</button>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2">
+                  <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Ringkasan</label>
+                  <textarea rows="6" placeholder="Tuliskan ringkasan adegan..." class="w-full p-6 rounded-[2rem] bg-slate-50 border text-sm font-medium outline-none focus:bg-white"></textarea>
+                </div>
+                <div class="space-y-4">
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Lokasi</label><input type="text" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                    <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Waktu</label><input type="text" class="w-full p-4 rounded-xl bg-slate-50 border text-sm font-bold"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-10" class="step-content">
+          <div class="bg-white rounded-2xl overflow-hidden border border-slate-200 flex flex-col h-[65vh] shadow-lg">
+            <div class="p-3 bg-slate-50 border-b flex gap-2 sm:gap-4 items-center flex-wrap shrink-0">
+                <select class="text-xs p-1.5 border rounded bg-white font-bold outline-none"><option>Normal</option></select>
+                <div class="flex gap-1 border-x px-2 sm:px-3">
+                  <button class="w-8 h-8 font-black hover:bg-slate-200 rounded transition-all">B</button>
+                  <button class="w-8 h-8 italic hover:bg-slate-200 rounded transition-all">I</button>
+                  <button class="w-8 h-8 underline hover:bg-slate-200 rounded transition-all">U</button>
+                </div>
+                <select class="text-xs p-1.5 border rounded bg-white font-bold outline-none hidden sm:block"><option>Times New Roman</option></select>
+                <div class="ml-auto flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full"><div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-[9px] font-black uppercase text-emerald-600 tracking-widest">SAVED</span></div>
+            </div>
+            <div class="flex-1 bg-slate-200 p-4 sm:p-6 flex justify-center overflow-y-auto custom-scrollbar">
+                <div class="w-full max-w-3xl bg-white shadow-2xl p-8 sm:p-16 min-h-[1000px] outline-none text-slate-800 leading-relaxed" contenteditable="true">
+                    <h1 class="text-3xl sm:text-4xl font-black mb-8 sm:mb-10">1</h1>
+                    <span class="text-slate-300 italic text-lg sm:text-xl">Mulai menulis di sini...</span>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="step-11" class="step-content">
+          <div class="bg-slate-900 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-center mb-8 text-white shadow-2xl gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-900/20">✓</div>
+                <div>
+                  <h3 class="font-black text-xs uppercase tracking-[0.2em] text-emerald-400">Final Export Engine</h3>
+                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">1 Halaman Terdeteksi</p>
                 </div>
               </div>
-              <button onclick="openEditor(event)" class="w-full md:w-auto bg-slate-800 hover:bg-emerald-700 text-white px-6 md:px-10 py-2.5 md:py-2 rounded-lg md:rounded-xl font-black text-xs md:text-sm shadow-lg transition-all active:scale-95 shrink-0">
+              <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                  <button class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">⤢ Mode Zen</button>
+                  <button class="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-900/20 transition-all active:scale-95">💾 Download PDF</button>
+              </div>
+          </div>
+          <div class="bg-slate-400/20 rounded-[3rem] p-6 md:p-12 flex flex-col items-center">
+              <div class="px-8 py-2 bg-slate-800 text-white rounded-full text-[11px] font-black uppercase tracking-[0.3em] mb-8 shadow-xl">AAA - Hal 1</div>
+              <div class="w-full max-w-xl aspect-[3/4] bg-white shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] rounded-sm border-t-4 border-slate-100"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-6 bg-white border-t border-slate-100 flex flex-wrap-reverse sm:flex-nowrap justify-between items-center gap-4 shrink-0">
+         <button id="prevBtn" onclick="prevStep()" class="w-full sm:w-auto text-slate-400 font-black uppercase text-xs tracking-widest hover:text-purple-600 transition-all opacity-0 pointer-events-none py-3">← Kembali</button>
+         <button id="nextBtn" onclick="nextStep()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-purple-100 transition-all active:scale-95">
+           Selanjutnya →
+         </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="mainContent" class="pt-20 min-h-screen">
+    <div class="max-w-[1400px] mx-auto px-4 sm:px-8 py-8 md:py-10 space-y-8 pb-24">
+      
+      <header class="space-y-2">
+        <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">EXPERIMENT</h1>
+        <p class="text-emerald-700 font-bold text-base md:text-lg leading-tight">Klik kartu buku untuk melihat progres penulisan mingguan.</p>
+      </header>
+
+      <section class="space-y-6 min-h-[300px]">
+        <div class="flex flex-col">
+          <div onclick="toggleStats('stats-1')" class="bg-white rounded-2xl p-6 shadow-sm border-2 border-slate-100 hover:border-emerald-500 transition-all cursor-pointer z-10 group relative">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4">
+              <div class="flex gap-4 w-full">
+                <div class="w-14 h-14 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-emerald-50 rounded-2xl group-hover:bg-emerald-100 transition-colors">
+                  <span class="text-4xl md:text-5xl">📖</span>
+                </div>
+                <div class="space-y-1 flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="text-base md:text-lg font-black text-slate-800 truncate">Proyek: Ayam Hitam</h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 text-amber-700 shrink-0">Lihat Stats</span>
+                  </div>
+                  <p class="text-xs md:text-sm font-bold text-slate-500">Update terakhir: 27 April 2026</p>
+                  <p class="text-xs md:text-sm font-bold text-emerald-600"><span class="font-black text-slate-400 uppercase text-[8px]">Kendala:</span> Belum paham mengatur alur</p>
+                </div>
+              </div>
+              <button onclick="openEditor(event)" class="bg-slate-800 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-black text-sm shadow-lg transition-all active:scale-95 shrink-0 w-full md:w-auto">
                 Buka Editor
               </button>
             </div>
           </div>
           
-          <div id="stats-1" class="hidden overflow-hidden bg-gradient-to-br from-amber-50 to-white rounded-b-[1.5rem] md:rounded-b-[2rem] border-x-2 border-b-2 border-amber-200 px-4 md:px-8 pt-10 pb-6 -mt-8 shadow-inner">
-            <div class="flex justify-between items-center mb-4 text-xs font-black text-amber-700 uppercase tracking-widest">
-              Aktivitas Mingguan <span class="bg-white px-3 py-1 rounded-full border border-amber-100 text-emerald-700">1,245 Kata</span>
-            </div>
-            <div class="flex items-end gap-2 h-24 mt-4 px-2">
-              <div class="bg-emerald-600 w-full rounded-t-sm h-[40%]"></div>
+          <div id="stats-1" class="hidden overflow-hidden bg-gradient-to-br from-amber-50 to-white rounded-b-[2rem] border-x-2 border-b-2 border-amber-200 px-4 md:px-8 pt-10 pb-6 -mt-8 shadow-inner transition-all duration-500">
+            <div class="flex justify-between items-center mb-4 text-[10px] md:text-xs font-black text-amber-700 uppercase tracking-widest">Aktivitas Mingguan <span class="bg-white px-3 py-1 rounded-full text-emerald-700 border border-amber-100 shadow-sm">1,245 Kata</span></div>
+            <div class="flex items-end gap-1 sm:gap-2 h-20 md:h-24 mt-4 px-1 sm:px-2">
+              <div class="bg-emerald-600 w-full rounded-t-sm h-[40%] transition-all duration-1000"></div>
               <div class="bg-emerald-600 w-full rounded-t-sm h-[60%]"></div>
               <div class="bg-emerald-600 w-full rounded-t-sm h-[30%]"></div>
               <div class="bg-amber-500 w-full rounded-t-sm h-[80%]"></div>
@@ -154,17 +507,16 @@
             </div>
           </div>
         </div>
-
       </section>
 
       <div class="hidden md:flex justify-end pr-4">
-        <button onclick="openModal()" class="text-amber-600 hover:text-emerald-700 font-black text-sm  hover:underline uppercase transition-all flex items-center gap-2">
+        <button onclick="toggleModal('addProjectModal')" class="text-amber-600 hover:text-emerald-700 font-black text-sm hover:underline uppercase transition-all flex items-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
           Tambah Proyek Baru
         </button>
       </div>
 
-      <button onclick="openModal()" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl z-50 border-2 border-white text-2xl font-bold active:scale-90 transition-all">
+      <button onclick="toggleModal('addProjectModal')" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl z-[50] border-2 border-white text-2xl font-bold active:scale-90 transition-all">
         +
       </button>
 
@@ -172,74 +524,154 @@
   </div>
 
   <script>
-    let isSidebarOpen = false;
-    let selectedCategory = 'fiksi';
-
-    function openModal() {
-      document.getElementById('addProjectModal').classList.remove('hidden');
-      document.getElementById('addProjectModal').classList.add('flex');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-      document.getElementById('addProjectModal').classList.add('hidden');
-      document.getElementById('addProjectModal').classList.remove('flex');
-      document.body.style.overflow = 'auto';
-    }
-
-    function selectCategory(cat) {
-      selectedCategory = cat;
-      const fiksiBtn = document.getElementById('cat-fiksi');
-      const nonFiksiBtn = document.getElementById('cat-nonfiksi');
-
-      if (cat === 'fiksi') {
-        fiksiBtn.className = "flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm";
-        nonFiksiBtn.className = "flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-slate-100 bg-white text-slate-400 hover:border-emerald-200";
-      } else {
-        nonFiksiBtn.className = "flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm";
-        fiksiBtn.className = "flex-1 py-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-wider border-slate-100 bg-white text-slate-400 hover:border-emerald-200";
-      }
-    }
-
-    function createProject() {
-      const title = document.getElementById('projectTitle').value;
-      if (!title) return alert('Mohon isi judul proyek!');
-      alert(`Proyek "${title}" dengan kategori ${selectedCategory.toUpperCase()} berhasil dibuat!`);
-      closeModal();
-    }
-
+    // --- SIDEBAR RESPONSIVE LOGIC ---
     function toggleSidebar() {
-      isSidebarOpen = !isSidebarOpen;
-      const sidebar = document.getElementById('sidebar');
-      const sidebarToggle = document.getElementById('sidebarToggle');
-      const toggleIcon = document.getElementById('toggleIcon');
-      const mobileOverlay = document.getElementById('mobileOverlay');
-      if (isSidebarOpen) {
-        sidebar.classList.remove('-translate-x-full');
-        mobileOverlay.classList.remove('hidden');
-        sidebarToggle.classList.add('left-64');
-        toggleIcon.setAttribute('d', 'M15 19l-7-7 7-7');
-      } else {
-        sidebar.classList.add('-translate-x-full');
-        mobileOverlay.classList.add('hidden');
-        sidebarToggle.classList.remove('left-64');
-        toggleIcon.setAttribute('d', 'M9 5l7 7-7 7');
+      const body = document.body;
+      // Jika layar desktop (>= 1024px)
+      if (window.innerWidth >= 1024) {
+        body.classList.toggle('sidebar-closed');
+      } 
+      // Jika layar mobile / tablet (< 1024px)
+      else {
+        body.classList.toggle('sidebar-open');
       }
     }
 
-    function toggleStats(id) {
-      const statsDiv = document.getElementById(id);
-      statsDiv.classList.toggle('hidden');
+    function closeSidebar() {
+      if (window.innerWidth < 1024) {
+        document.body.classList.remove('sidebar-open');
+      }
+    }
+
+    // Hindari bug tampilan jika me-resize layar dalam kondisi menu terbuka
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) {
+        document.body.classList.remove('sidebar-open');
+      } else {
+        document.body.classList.remove('sidebar-closed');
+      }
+    });
+
+    // --- EDITOR LOGIC ---
+    let currentStep = 1;
+    const totalSteps = 11;
+
+    const stepsMeta = {
+      1: { name: "Ide Cepat", label: "Fiksi" },
+      2: { name: "Referensi Visual", label: "Visual" },
+      3: { name: "Desain Sampul", label: "Desain" },
+      4: { name: "Materi Riset", label: "Riset" },
+      5: { name: "Tambah Bab Baru", label: "Struktur" },
+      6: { name: "Karakter Baru", label: "Cast" },
+      7: { name: "Lokasi Baru", label: "World" },
+      8: { name: "Peristiwa Baru", label: "Timeline" },
+      9: { name: "Adegan Baru", label: "Scene" },
+      10: { name: "Editor Penulisan", label: "Naskah" },
+      11: { name: "Final Export Engine", label: "Final" }
+    };
+
+    function initProgressBar() {
+        const bar = document.getElementById('progressBar');
+        bar.innerHTML = '';
+        for(let i=1; i<=totalSteps; i++) {
+            const div = document.createElement('div');
+            div.id = `bar-seg-${i}`;
+            // Progress segment diperkecil otomatis di layar kecil
+            div.className = `w-6 md:w-10 h-1.5 rounded-full transition-all duration-500 ${i <= currentStep ? 'bg-purple-600' : 'bg-slate-200'}`;
+            bar.appendChild(div);
+        }
+    }
+
+    function updateStepUI() {
+        document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+
+        const meta = stepsMeta[currentStep];
+        document.getElementById('editorLabel').innerText = meta.label;
+        document.getElementById('currentStepName').innerText = meta.name;
+        document.getElementById('stepCounter').innerText = `Langkah ${currentStep} dari ${totalSteps}`;
+
+        for(let i=1; i<=totalSteps; i++) {
+            const seg = document.getElementById(`bar-seg-${i}`);
+            if(seg) seg.className = `w-6 md:w-10 h-1.5 rounded-full transition-all duration-500 ${i <= currentStep ? 'bg-purple-600' : 'bg-slate-200'}`;
+        }
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        if(currentStep === 1) {
+            prevBtn.classList.add('opacity-0', 'pointer-events-none');
+            prevBtn.classList.remove('w-full');
+        } else {
+            prevBtn.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        if(currentStep === totalSteps) {
+            nextBtn.innerText = "Selesai ✓";
+            nextBtn.classList.replace('bg-purple-600', 'bg-emerald-600');
+            nextBtn.classList.replace('hover:bg-purple-700', 'hover:bg-emerald-700');
+        } else {
+            nextBtn.innerText = "Selanjutnya →";
+            nextBtn.classList.replace('bg-emerald-600', 'bg-purple-600');
+            nextBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-purple-700');
+        }
+
+        document.getElementById('editorScrollArea').scrollTop = 0;
+    }
+
+    function nextStep() {
+        if(currentStep < totalSteps) {
+            currentStep++;
+            updateStepUI();
+        } else {
+            alert("Draft Proyek Selesai Disimpan!");
+            closeModal('editorModal');
+        }
+    }
+
+    function prevStep() {
+        if(currentStep > 1) {
+            currentStep--;
+            updateStepUI();
+        }
     }
 
     function openEditor(event) {
-      event.stopPropagation(); 
-      window.location.href = 'editor.html'; 
+        event.stopPropagation();
+        currentStep = 1;
+        toggleModal('editorModal');
+        initProgressBar();
+        updateStepUI();
+    }
+
+    // --- MODAL & STATS LOGIC ---
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.toggle('hidden');
+        if(!modal.classList.contains('hidden')) {
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        } else {
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+
+    function toggleStats(id) {
+      document.getElementById(id).classList.toggle('hidden');
     }
 
     window.onclick = function(event) {
-      const modal = document.getElementById('addProjectModal');
-      if (event.target == modal) closeModal();
+      if (event.target.classList.contains('modal-backdrop')) {
+        closeModal(event.target.id);
+      }
     }
   </script>
 </body>
